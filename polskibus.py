@@ -32,6 +32,14 @@ class Polskibus:
 		for city in soup.findAll('option')[1:]:
 			self.destinations[city.text] = city['value']
 
+	def set_destination(self, destination_id):
+		requests.get("http://www.polskibus.com/polskibus/destination/{}".format(destination_id))
+
+	def set_outbound(self, date):
+		if requests.get('http://www.polskibus.com/polskibus/outbound/{}'.format(date), cookies=self.cookies).status_code != 200:
+			raise RuntimeError('Value "{}" is invalid or connection problem to polskibus.com page.')
+		requests.get('http://www.polskibus.com/polskibus/return/1')
+
 
 if __name__ == '__main__':
 	args = docopt(__doc__, version='Polskibus cos tam 0.1')
@@ -56,3 +64,6 @@ if __name__ == '__main__':
 				del polskibus.destinations[e]
 			except KeyError:
 				pass
+		polskibus.set_outbound(args['<date>'])
+
+
