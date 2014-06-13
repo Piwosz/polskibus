@@ -13,6 +13,8 @@ from docopt import docopt
 class Polskibus:
 	def __init__(self):
 		self.origins = dict()
+		self.destinations = dict()
+		self.cookies = None
 		pass
 
 	def get_origins(self):
@@ -22,9 +24,15 @@ class Polskibus:
 			self.origins[city.text] = city['value']
 
 	def get_destinations(self, destination):
-		r = requests.get('http://www.polskibus.com/polskibus/destination/{}'.format(self.origins[destination]))
-		o = requests.get('http://www.polskibus.com/polskibus/destinations', cookies=r.cookies)
-		return o
+		r = requests.get('http://www.polskibus.com/polskibus/origin/{}'.format(self.origins[destination]))
+		if not self.cookies:
+			self.cookies = r.cookies
+		o = requests.get('http://www.polskibus.com/polskibus/destinations', cookies=self.cookies)
+		soup = Soup(o.text)
+		for city in soup.findAll('option')[1:]:
+			self.destinations[city.text] = city['value']
+
+		# return o
 
 if __name__ == '__main__':
 	args = docopt(__doc__, version='Polskibus cos tam 0.1')
@@ -38,10 +46,9 @@ if __name__ == '__main__':
 				print city
 		else:
 			print "Destination cities available for {}".format(args['<city>'][0])
-			for city in polskibus.get_destinations(args['<city>'][0]):
-				pass
-
-
+			# for city in polskibus.get_destinations(args['<city>'][0]):
+			polskibus.get_destinations(args['<city>'][0].decode('utf-8'))
+			for city in polskibus.destinations:
+				print city
 	elif args['check']:
-		print args
-		print "-----------------------------------------------------------------------------"
+		pass
