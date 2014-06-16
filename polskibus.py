@@ -7,6 +7,7 @@ Usage:
 """
 import sys
 import requests
+import datetime
 from BeautifulSoup import BeautifulSoup as Soup
 from docopt import docopt
 
@@ -30,15 +31,25 @@ class Polskibus:
 		o = requests.get('http://www.polskibus.com/polskibus/destinations', cookies=self.cookies)
 		soup = Soup(o.text)
 		for city in soup.findAll('option')[1:]:
-			self.destinations[city.text] = city['value']
+			self.destinations[city.text.encode('utf-8')] = city['value']
 
 	def set_destination(self, destination_id):
 		requests.get("http://www.polskibus.com/polskibus/destination/{}".format(destination_id))
 
 	def set_outbound(self, date):
-		if requests.get('http://www.polskibus.com/polskibus/outbound/{}'.format(date), cookies=self.cookies).status_code != 200:
+		r = requests.get('http://www.polskibus.com/polskibus/outbound/{}'.format(date), cookies=self.cookies)
+		if r.status_code != 200: 
 			raise RuntimeError('Value "{}" is invalid or connection problem to polskibus.com page.')
 		requests.get('http://www.polskibus.com/polskibus/return/1')
+
+	def set_return(self, date):
+		r = requests.get('http://www.polskibus.com/polskibus/return/{}'.format(date), cookies=self.cookies)
+		if r.status_code != 200:
+			raise RuntimeError('Value "{}" may be invalid or just stupid.'.format(date))
+
+	def get_routes(self):
+		r = requests.get('http://www.polskibus.com/search-results')
+		soup = Soup(r.text)
 
 
 if __name__ == '__main__':
@@ -64,6 +75,17 @@ if __name__ == '__main__':
 				del polskibus.destinations[e]
 			except KeyError:
 				pass
-		polskibus.set_outbound(args['<date>'])
+		outbound_date = datetime.datetime.strptime(args['<date>'],'%d/%m/%Y')
+
+		max_days = int(args['--max-days'] or 31)
+		for destination in polskibus.destinations:
+			polskibus.set_destination(destination)
+			for outbound_shift in range(0, max_days):
+				outbound_date = outbound_date + datetime.timedelta(days=outbound_shift)
+				polskibus.set_outbound(outbound_date.strftime('%d/%m/%Y'))
+				for return_shift in range(1, max_days - outbound_shift):
+					return_date = outbound_date + datetime.timedelta(days=return_shift)
+					polskibus.set_return(return_date.strftime('%d/%m/%Y'))
+
 
 
