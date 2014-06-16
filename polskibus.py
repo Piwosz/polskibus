@@ -23,12 +23,16 @@ class Polskibus:
 		soup = Soup(r.text)
 		for city in soup.findAll('option')[1:]:
 			self.origins[city.text] = city['value']
+		if not self.cookies:
+			self.cookies = r.cookies
 
 	def get_destinations(self, destination):
-		r = requests.get('http://www.polskibus.com/polskibus/origin/{}'.format(self.origins[destination]))
+		r = requests.get('http://www.polskibus.com/polskibus/origin/{}'.format(self.origins[destination]), cookies=self.cookies)
 		if not self.cookies:
 			self.cookies = r.cookies
 		o = requests.get('http://www.polskibus.com/polskibus/destinations', cookies=self.cookies)
+		if o.status_code != 200:
+			raise RuntimeError("Some stupid error during retrieving destinations occurred.")
 		soup = Soup(o.text)
 		for city in soup.findAll('option')[1:]:
 			self.destinations[city.text.encode('utf-8')] = city['value']
@@ -48,8 +52,8 @@ class Polskibus:
 			raise RuntimeError('Value "{}" may be invalid or just stupid.'.format(date))
 
 	def get_routes(self):
-		r = requests.get('http://www.polskibus.com/search-results')
-		soup = Soup(r.text)
+		r = requests.get('http://www.polskibus.com/search-results', cookies=self.cookies)
+
 
 
 if __name__ == '__main__':
